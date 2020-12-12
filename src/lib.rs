@@ -133,6 +133,100 @@ pub fn part1_e(numbers: &Vec<u64>, preamble: usize) -> Option<u64> {
     })
 }
 
+pub mod believer {
+    /// NOTE: License: All code in this section is owned by https://github.com/believer/aoc.
+    /// The repo does not have a License file attached, which means that all Copyright belongs to @believer.
+    use itertools::iproduct;
+    use std::collections::HashSet;
+
+    /// https://github.com/believer/advent-of-code/blob/master/rust/2020/src/day_09.rs
+    fn calculate_sums(input: &[u64]) -> Vec<u64> {
+        iproduct!(input.iter(), input.iter())
+            .map(|tuple| tuple.0 + tuple.1)
+            .collect()
+    }
+
+    /// https://github.com/believer/advent-of-code/blob/master/rust/2020/src/day_09.rs
+    pub fn find_broken_number(input: &[u64], preamble: usize) -> u64 {
+        let mut not_in: HashSet<u64> = HashSet::new();
+
+        for i in preamble..input.len() {
+            let (previous, _) = input.split_at(i);
+            let (_, last_five) = previous.split_at(i - preamble);
+            let sums = calculate_sums(last_five);
+
+            let v = input[i];
+
+            if !sums.contains(&v) {
+                not_in.insert(v);
+            }
+        }
+
+        *not_in.iter().next().unwrap()
+    }
+
+    /// Use slices directly
+    pub fn find_broken_number_b(input: &[u64], preamble: usize) -> u64 {
+        // let mut not_in: HashSet<u64> = HashSet::new();
+
+        for i in preamble..input.len() {
+            let last_five = &input[(i - preamble)..i];
+            // let (previous, _) = input.split_at(i);
+            // let (_, last_five) = previous.split_at(i - preamble);
+            let sums = calculate_sums(last_five);
+
+            let v = input[i];
+
+            if !sums.contains(&v) {
+                // not_in.insert(v);
+                return v;
+            }
+        }
+
+        unreachable!()
+        // *not_in.iter().next().unwrap()
+    }
+}
+
+pub mod benfrankel {
+    /// NOTE: License: All code in this section is owned by https://github.com/benfrankel/aoc.
+    /// The repo does not have a License file attached, which means that all Copyright belongs to Ben Frankel.
+    use std::cmp::Ordering;
+
+    /// https://github.com/benfrankel/aoc/blob/2b6797cea62f95f8c80eae45ecbc76b973fab239/src/util.rs
+    /// @benfrankel
+    pub fn find_sum2(a: &[i64], target: i64) -> Option<(usize, usize)> {
+        let mut i = 0;
+        let mut j = a.len() - 1;
+        while i < j {
+            let sum = a[i] + a[j];
+            match sum.cmp(&target) {
+                Ordering::Equal => return Some((i, j)),
+                Ordering::Less => i += 1,
+                Ordering::Greater => j -= 1,
+            }
+        }
+
+        None
+    }
+
+    /// https://github.com/benfrankel/aoc/blob/e7ea2cbc3814765ede9bbcd094be65b916c51b44/src/aoc/year2020/day09.rs#L18
+    /// @benfrankel
+    pub fn part1(a: &[i64], preamble: usize) -> i64 {
+        // let preamble = 25;  Converted to argument by @siedentop to make it comparable to other functions.
+
+        for i in preamble..a.len() {
+            let mut window = a[i - preamble..i].to_vec();
+            window.sort_unstable();
+            if find_sum2(&window, a[i]).is_none() {
+                return a[i];
+            }
+        }
+
+        panic!("Couldn't find an appropriate window.")
+    }
+}
+
 /// Naive implementation. But originally faster than part 1!
 /// O(n^2)
 /// 180us
