@@ -1,41 +1,67 @@
 use eyre::Result;
 use eyre::{eyre, Context};
 use itertools::Itertools;
-use std::str::FromStr;
+use std::{convert::TryInto, str::FromStr};
 
 /// Originally, I used find_sum() function. Even with inline that was slower.
 /// So, instead I included the check inside the loop.
-pub fn part1(numbers: &Vec<u64>, preamble: usize) -> Option<u64> {
+pub fn part1(numbers: &[u64], preamble: usize) -> Option<u64> {
     for window in numbers.windows(preamble + 1) {
         let target = window[preamble];
 
-        let res = window
+        let has_sum = window
             .iter()
             .combinations(2)
-            .find(|p| *p[0] + *p[1] == target);
-        if res.is_none() {
-            return Some(*window.last().unwrap());
+            .any(|p| *p[0] + *p[1] == target);
+        if !has_sum {
+            return Some(target);
         }
     }
     None
 }
 
 /// Virtually the same as impl A.
-pub fn part1_b(numbers: &Vec<u64>, preamble: usize) -> Option<u64> {
-    numbers.windows(preamble + 1).find_map(|window| {
+pub fn part1_b(numbers: &[u64], preamble: usize) -> Option<u64> {
+    for window in numbers.windows(preamble + 1) {
         let target = window[preamble];
 
-        if window
-            .iter()
-            .combinations(2)
-            .find(|p| *p[0] + *p[1] == target)
-            .is_none()
-        {
-            Some(target)
-        } else {
-            None
+        let has_sum = (0..preamble)
+            .map(|j| ((j + 1)..preamble).map(move |k| (j, k)))
+            .flatten()
+            .any(|(j, k)| window[j] + window[k] == target);
+
+        if !has_sum {
+            return Some(target);
         }
-    })
+    }
+    None
+}
+
+const PREAMBLE: usize = 25;
+pub fn part1_f(a: &Vec<u64>, _preamble: usize) -> Option<u64> {
+    for i in PREAMBLE..a.len() {
+        let window: [u64; PREAMBLE] = a[i - PREAMBLE..i].try_into().unwrap();
+        // let window = a[i - PREAMBLE..i].to_vec();
+        // window.sort_unstable();
+        if !has_sum2(&window, a[i]) {
+            return Some(a[i]);
+        }
+    }
+
+    None
+}
+// Same as above has_sum but using a linear search for hopefully better cache perf on small slices
+#[inline]
+fn has_sum2(a: &[u64; PREAMBLE], target: u64) -> bool {
+    // fn has_sum2(a: &[u64], target: u64) -> bool {
+    for i in 0..a.len() {
+        for j in (i + 1)..a.len() {
+            if a[i] + a[j] == target {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Pre-compute the sliding window sums for each combination in the window.
@@ -134,8 +160,8 @@ pub fn part1_e(numbers: &Vec<u64>, preamble: usize) -> Option<u64> {
 }
 
 pub mod believer {
-    /// NOTE: License: All code in this section is owned by https://github.com/believer/aoc.
-    /// The repo does not have a License file attached, which means that all Copyright belongs to @believer.
+    /// NOTE: License: All code in this section is owned by https://github.com/believer/advent-of-code
+    /// The repo does not have a License file attached, which means that all Copyright belongs to @believer (Rickard Natt och Dag).
     use itertools::iproduct;
     use std::collections::HashSet;
 
@@ -224,6 +250,90 @@ pub mod benfrankel {
         }
 
         panic!("Couldn't find an appropriate window.")
+    }
+
+    /// Use &[u64] to make it comparable to the other implementations.
+    /// by @siedentop.
+    pub fn part1_b(a: &[u64], preamble: usize) -> u64 {
+        for i in preamble..a.len() {
+            let mut window = a[i - preamble..i].to_vec();
+            window.sort_unstable();
+            if find_sum2_b(&window, a[i]).is_none() {
+                return a[i];
+            }
+        }
+
+        panic!("Couldn't find an appropriate window.")
+    }
+    // Same as above, but taking u64 not i64.
+    fn find_sum2_b(a: &[u64], target: u64) -> Option<(usize, usize)> {
+        let mut i = 0;
+        let mut j = a.len() - 1;
+        while i < j {
+            let sum = a[i] + a[j];
+            match sum.cmp(&target) {
+                Ordering::Equal => return Some((i, j)),
+                Ordering::Less => i += 1,
+                Ordering::Greater => j -= 1,
+            }
+        }
+
+        None
+    }
+
+    /// Use &[u64] to make it comparable to the other implementations.
+    /// by @siedentop.
+    pub fn part1_c(a: &[u64], preamble: usize) -> u64 {
+        for i in preamble..a.len() {
+            let mut window = a[i - preamble..i].to_vec();
+            window.sort_unstable();
+            if !has_sum(&window, a[i]) {
+                return a[i];
+            }
+        }
+
+        panic!("Couldn't find an appropriate window.")
+    }
+    // Same as above find_sum2 but returning only true/false.
+    #[inline]
+    fn has_sum(a: &[u64], target: u64) -> bool {
+        let mut i = 0;
+        let mut j = a.len() - 1;
+        while i < j {
+            let sum = a[i] + a[j];
+            match sum.cmp(&target) {
+                Ordering::Equal => return true,
+                Ordering::Less => i += 1,
+                Ordering::Greater => j -= 1,
+            }
+        }
+        false
+    }
+
+    /// Use &[u64] to make it comparable to the other implementations.
+    /// by @siedentop.
+    pub fn part1_d(a: &[u64], preamble: usize) -> u64 {
+        for i in preamble..a.len() {
+            let mut window = a[i - preamble..i].to_vec();
+            window.sort_unstable();
+            if !has_sum2(&window, a[i]) {
+                return a[i];
+            }
+        }
+
+        panic!("Couldn't find an appropriate window.")
+    }
+    // Same as above has_sum but using a linear search for hopefully better cache perf on small slices
+    #[inline]
+    fn has_sum2(a: &[u64], target: u64) -> bool {
+        for i in 0..a.len() {
+            for j in (i + 1)..a.len() {
+                if a[i] + a[j] == target {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 
